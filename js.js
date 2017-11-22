@@ -1,3 +1,3 @@
 jQuery(document).ready(function($) {
-	 alert('Pintó embedear jquery che!!');
+	 console.log('js.js LOADED');
 });
