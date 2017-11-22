@@ -14,37 +14,50 @@
 add_action('admin_menu', 'wooconnector_admin_page');
 function wooconnector_admin_page(){
     add_menu_page('Wooconnector', 'Wooconnector', 'administrator', 'wooconnector-settings', 'wooconnector_admin_page_callback');
-    add_action('admin_init', 'wooconnector_register_settings');
-    add_action( 'admin_init', 'save_child_brands');
-    wp_enqueue_script('test', plugin_dir_url(__FILE__) . 'js.js', array('jquery'));
-
 }
 
+add_action('admin_init', 'wooconnector_register_settings');
 
 function brand_table_create() {
-    global $table_prefix, $wpdb;
+    $jal_db_version = '1.0';
+    global $wpdb;
+    global $jal_db_version;
 
-    $tblname = 'WCON_child_brands';
-    $wp_track_table = $table_prefix . "$tblname ";
+    $table_name = $wpdb->prefix . 'WCONchildbrands';
+    $table_name2 = $wpdb->prefix . 'WCONsync';
+    
+    $charset_collate = $wpdb->get_charset_collate();
 
-    #Check to see if the table exists already, if not, then create it
-
-    if($wpdb->get_var( "show tables like '$wp_track_table'" ) != $wp_track_table) {
-
-        $sql = "CREATE TABLE $tblname (
-      id tinyint(3) NOT NULL AUTO_INCREMENT,
-      name varchar(55) DEFAULT '' NOT NULL,
-      url varchar(55) DEFAULT '' NOT NULL,
-      key varchar(55) DEFAULT '' NOT NULL,
-      secret varchar(55) DEFAULT '' NOT NULL,
-      PRIMARY KEY  (id)
+    $sql = "CREATE TABLE $table_name (
+          id mediumint(9) NOT NULL AUTO_INCREMENT,
+          url varchar(50),
+          name varchar(50),
+          keyvalue varchar(50),
+          secret varchar(50),
+          PRIMARY KEY  (id)
     ) $charset_collate;";
-        require_once( ABSPATH . '/wp-admin/includes/upgrade.php' );
-        dbDelta($sql);
-    }
+
+    require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
+    dbDelta( $sql );
+
+
+    $sql2 = "CREATE TABLE $table_name2 (
+          id mediumint(9) NOT NULL AUTO_INCREMENT,
+          dataTime datetime,
+          brand varchar(50),
+          status bit(0) NOT NULL,
+          newproducts varchar(50),
+          updated bit(0) NOT NULL,
+          deleted bit(0) NOT NULL,
+          PRIMARY KEY  (id)
+    ) $charset_collate;";
+    dbDelta( $sql2 );
+
+    add_option( 'jal_db_version', $jal_db_version );
 }
 
- register_activation_hook( __FILE__, 'brand_table_create' );
+register_activation_hook( __FILE__, 'brand_table_create' );
+ 
 
 /*
  * register the settings
@@ -89,24 +102,48 @@ function wooconnector_settings_shedule2() {
     echo '<input type="time" name="wooconnector_shedule2" value="'.$shedule2.'" placeholder="SHEDULE 2">';
 }
 
-function save_child_brands() {
-    // save new child brand
-    add_option( 'brand-title');
-}
+
 function delete_child_brand() {
     // delete child brand
 }
 function edit_child_brand() {
     // update child brand
 }
-function show_child_brands() {
-    // delete child brand
-}
 
+
+// add the shortcode [persona-table], tell WP which function to call
+add_shortcode( 'persona-table', 'persona_table_shortcode' );
+
+// this function generates the shortcode output
+function select_child_brand() {
+    global $wpdb;
+    // Shortcodes RETURN content, so store in a variable to return
+    $content = '<table id="brands" border="1"><h2>Child Brands</h2>';
+    $content .= '<tr><th class">&nbsp;</th><th class">name</th><th class">url</th><th class">key</th><th class">secret</th></tr>';
+    $results = $wpdb->get_results( 'SELECT * FROM wp_WCONchildbrands' );
+    foreach ( $results AS $row ) {
+        $content .= '<tr>';
+        // Modify these to match the database structure
+        //$content .= '<td>' . $row->id . '</td>';
+        $content .= '<td><button>X</button></td>';
+        $content .= '<td>' . $row->name . '</td>';
+        $content .= '<td>' . $row->url . '</td>';
+        $content .= '<td>' . $row->keyvalue . '</td>';
+        $content .= '<td>' . $row->secret . '</td>';
+        $content .= '<td>EDITAR</td>';
+        $content .= '</tr>';
+    }
+    $content .= '<tr><td>&nbsp;</td><td><input type="text" placeholder="Name"></td><td><input type="text" placeholder="Url"></td><Td><input type="text" placeholder="Key"></td><td><input type="text" placeholder="Secret"></td><td><button>ENVIAR</button></td></tr>';
+    $content .= '</table>';
+
+    // return the table
+    echo $content;
+}
 
 
 // plugin settings page
 function wooconnector_admin_page_callback() { ?>
+
     <div class="wrap">
         
     <h2>WooConnector for Sttila</h2>
@@ -119,29 +156,11 @@ function wooconnector_admin_page_callback() { ?>
         do_settings_sections('wooconnector-settings' );
         submit_button(); ?>
 
-        
-        <table id="brands">
-        <h2 style="display: none">Child Brands</h2>
-        <!-- Dynamic Rows, list all array items as an individual row-->
-            <tr>
-                <td><button>X</button></td>
-                <td>Adidas</td>
-                <td>addidas.wooo.c</td>
-                <td>$%#asd8Fas4Eda4!</td>
-                <td>************</td>
-                <td><a href="#">edit</a></td>
-            </tr>
-            
-            <tr>
-                <td>+</td>
-                <td><input type="text" placeholder="Name"></td>
-                <td><input type="text" placeholder="URL"></td>
-                <td><input type="text" placeholder="Key"></td>
-                <td><input type="text" placeholder="Secret"></td>
-                <td><button>AGREGAR</button></td>
-            </tr>
-        </table>
         <hr>
+        BUENO TODO LINDO?
+        <?php select_child_brand(); ?>
+        <hr>
+
         <table id="sync-status" style="display: none">
         <h2 style="display: none">SYNC Status</h2>
             <tr>
