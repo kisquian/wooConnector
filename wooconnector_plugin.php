@@ -13,51 +13,14 @@
  */
 add_action('admin_menu', 'wooconnector_admin_page');
 function wooconnector_admin_page(){
-    add_menu_page('Wooconnector', 'Wooconnector', 'administrator', 'wooconnector-settings', 'wooconnector_admin_page_callback');
+    add_menu_page('WooConnector', 'WooConnector', 'administrator', 'wooconnector-settings', 'wooconnector_admin_page_callback');
+    add_submenu_page( 'wooconnector-settings', 'Child brands', 'Child brands', 'administrator', 'wooconnector-settings-brands', 'select_child_brand' );
+    add_submenu_page( 'wooconnector-settings', 'SYNC', 'SYNC', 'administrator', 'wooconnector-settings-sync', 'select_sync' );
+
 }
 
 add_action('admin_init', 'wooconnector_register_settings');
 
-function brand_table_create() {
-    $jal_db_version = '1.0';
-    global $wpdb;
-    global $jal_db_version;
-
-    $table_name = $wpdb->prefix . 'WCONchildbrands';
-    $table_name2 = $wpdb->prefix . 'WCONsync';
-    
-    $charset_collate = $wpdb->get_charset_collate();
-
-    $sql = "CREATE TABLE $table_name (
-          id mediumint(9) NOT NULL AUTO_INCREMENT,
-          url varchar(50),
-          name varchar(50),
-          keyvalue varchar(50),
-          secret varchar(50),
-          PRIMARY KEY  (id)
-    ) $charset_collate;";
-
-    require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
-    dbDelta( $sql );
-
-
-    $sql2 = "CREATE TABLE $table_name2 (
-          id mediumint(9) NOT NULL AUTO_INCREMENT,
-          dataTime datetime,
-          brand varchar(50),
-          status bit(0) NOT NULL,
-          newproducts varchar(50),
-          updated bit(0) NOT NULL,
-          deleted bit(0) NOT NULL,
-          PRIMARY KEY  (id)
-    ) $charset_collate;";
-    dbDelta( $sql2 );
-
-    add_option( 'jal_db_version', $jal_db_version );
-}
-
-register_activation_hook( __FILE__, 'brand_table_create' );
- 
 
 /*
  * register the settings
@@ -102,23 +65,72 @@ function wooconnector_settings_shedule2() {
     echo '<input type="time" name="wooconnector_shedule2" value="'.$shedule2.'" placeholder="SHEDULE 2">';
 }
 
+function brand_table_create() {
+    $jal_db_version = '1.0';
+    global $wpdb;
+    global $jal_db_version;
 
-function delete_child_brand() {
-    // delete child brand
+    $table_name = $wpdb->prefix . 'WCONchildbrands';
+    $table_name2 = $wpdb->prefix . 'WCONsync';
+    
+    $charset_collate = $wpdb->get_charset_collate();
+
+    $sql = "CREATE TABLE $table_name (
+          id mediumint(9) NOT NULL AUTO_INCREMENT,
+          url varchar(50),
+          name varchar(50),
+          keyvalue varchar(50),
+          secret varchar(50),
+          PRIMARY KEY  (id)
+    ) $charset_collate;";
+
+    require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
+    dbDelta( $sql );
+
+
+    $sql2 = "CREATE TABLE $table_name2 (
+          id mediumint(9) NOT NULL AUTO_INCREMENT,
+          dataTime datetime,
+          brand varchar(50),
+          status bit(0) NOT NULL,
+          newproducts varchar(50),
+          updated bit(0) NOT NULL,
+          deleted bit(0) NOT NULL,
+          PRIMARY KEY  (id)
+    ) $charset_collate;";
+    dbDelta( $sql2 );
+
+    add_option( 'jal_db_version', $jal_db_version );
 }
-function edit_child_brand() {
-    // update child brand
-}
 
+register_activation_hook( __FILE__, 'brand_table_create' );
 
-// add the shortcode [persona-table], tell WP which function to call
-add_shortcode( 'persona-table', 'persona_table_shortcode' );
 
 // this function generates the shortcode output
 function select_child_brand() {
-    global $wpdb;
+     global $wpdb;
+
+    if ( isset( $_POST["sendbtn"] )) {
+    $table = $wpdb->prefix."WCONchildbrands";
+    $name = $_POST["namebrand"];
+    $key = $_POST["keybrand"];
+    $url = $_POST["urlbrand"];
+    $secret = $_POST["secretbrand"];
+
+    $wpdb->insert( 
+        $table, 
+        array( 
+            'name' => $name,
+            'url' => $url,
+            'keyvalue' => $key,
+            'secret' => $secret
+        )
+    );
+    }
+
+   
     // Shortcodes RETURN content, so store in a variable to return
-    $content = '<table id="brands" border="1"><h2>Child Brands</h2>';
+    $content = '<form method="POST"><table id="brands" border="1"><h2>Child Brands</h2>';
     $content .= '<tr><th class">&nbsp;</th><th class">name</th><th class">url</th><th class">key</th><th class">secret</th></tr>';
     $results = $wpdb->get_results( 'SELECT * FROM wp_WCONchildbrands' );
     foreach ( $results AS $row ) {
@@ -133,12 +145,68 @@ function select_child_brand() {
         $content .= '<td>EDITAR</td>';
         $content .= '</tr>';
     }
-    $content .= '<tr><td>&nbsp;</td><td><input type="text" placeholder="Name"></td><td><input type="text" placeholder="Url"></td><Td><input type="text" placeholder="Key"></td><td><input type="text" placeholder="Secret"></td><td><button>ENVIAR</button></td></tr>';
-    $content .= '</table>';
+    $content .= '<tr><td>&nbsp;</td><td><input name="namebrand" id="namebrand" type="text" placeholder="Name"></td>
+    <td><input name="urlbrand" type="text" placeholder="Url"></td>
+    <Td><input name="keybrand" type="text" placeholder="Key"></td>
+    <td><input name="secretbrand" type="text" placeholder="Secret"></td>
+    <td><input type="submit" name="sendbtn" value="enviar"></td></tr>';
+    $content .= '</table></form>';
 
     // return the table
     echo $content;
+
 }
+
+function select_sync() {
+     global $wpdb;
+
+    if ( isset( $_POST["sendbtn"] )) {
+    $table = $wpdb->prefix."WCONchildbrands";
+    $name = $_POST["namebrand"];
+    $key = $_POST["keybrand"];
+    $url = $_POST["urlbrand"];
+    $secret = $_POST["secretbrand"];
+
+    $wpdb->insert( 
+        $table, 
+        array( 
+            'name' => $name,
+            'url' => $url,
+            'keyvalue' => $key,
+            'secret' => $secret
+        )
+    );
+    }
+
+   
+    // Shortcodes RETURN content, so store in a variable to return
+    $content = '<form method="POST"><table id="brands" border="1"><h2>Child Brands</h2>';
+    $content .= '<tr><th class">&nbsp;</th><th class">name</th><th class">url</th><th class">key</th><th class">secret</th></tr>';
+    $results = $wpdb->get_results( 'SELECT * FROM wp_WCONchildbrands' );
+    foreach ( $results AS $row ) {
+        $content .= '<tr>';
+        // Modify these to match the database structure
+        //$content .= '<td>' . $row->id . '</td>';
+        $content .= '<td><button>X</button></td>';
+        $content .= '<td>' . $row->name . '</td>';
+        $content .= '<td>' . $row->url . '</td>';
+        $content .= '<td>' . $row->keyvalue . '</td>';
+        $content .= '<td>' . $row->secret . '</td>';
+        $content .= '<td>EDITAR</td>';
+        $content .= '</tr>';
+    }
+    $content .= '<tr><td>&nbsp;</td><td><input name="namebrand" id="namebrand" type="text" placeholder="Name"></td>
+    <td><input name="urlbrand" type="text" placeholder="Url"></td>
+    <Td><input name="keybrand" type="text" placeholder="Key"></td>
+    <td><input name="secretbrand" type="text" placeholder="Secret"></td>
+    <td><input type="submit" name="sendbtn" value="enviar"></td></tr>';
+    $content .= '</table></form>';
+
+    // return the table
+    echo $content;
+
+}
+
 
 
 // plugin settings page
@@ -155,69 +223,7 @@ function wooconnector_admin_page_callback() { ?>
         settings_fields( 'wooconnector_settings_group' );
         do_settings_sections('wooconnector-settings' );
         submit_button(); ?>
-
-        <hr>
-        BUENO TODO LINDO?
-        <?php select_child_brand(); ?>
-        <hr>
-
-        <table id="sync-status" style="display: none">
-        <h2 style="display: none">SYNC Status</h2>
-            <tr>
-                <th>DATETIME</th>
-                <th>BRAND</th>
-                <th>STATUS</th>
-                <th>NEW PRODUCTS</th>
-                <th>UPDATED</th>
-                <th>DELETED</th>
-            </tr>
-            <tr>
-                <td>17/10 - 00:00</td>
-                <td>Adidas</td>
-                <td><input type="checkbox" name="" id=""></td>
-                <td>10</td>
-                <td>5</td>
-                <td>0</td>
-            </tr>
-            <tr>
-                <td>17/10 - 00:00</td>
-                <td>Adidas</td>
-                <td><input type="checkbox" name="" id=""></td>
-                <td>10</td>
-                <td>5</td>
-                <td>0</td>
-            </tr>
-            <tr>
-                <td>17/10 - 00:00</td>
-                <td>Adidas</td>
-                <td><input type="checkbox" name="" id=""></td>
-                <td colspan="3">API KEY Expired </td>
-            </tr>
-            <tr>
-                <td>17/10 - 00:00</td>
-                <td>Adidas</td>
-                <td><input type="checkbox" name="" id=""></td>
-                <td>10</td>
-                <td>5</td>
-                <td>0</td>
-            </tr>
-            <tr>
-                <td>17/10 - 00:00</td>
-                <td>Adidas</td>
-                <td><input type="checkbox" name="" id=""></td>
-                <td>10</td>
-                <td>5</td>
-                <td>0</td>
-            </tr>
-            <tr>
-                <td>17/10 - 00:00</td>
-                <td>Adidas</td>
-                <td><input type="checkbox" name="" id=""></td>
-                <td>10</td>
-                <td>5</td>
-                <td>0</td>
-            </tr>
-        </table>
+      
     </form>
 </div>
 <?php }
